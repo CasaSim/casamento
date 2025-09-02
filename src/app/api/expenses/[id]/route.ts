@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET( { params }: { params: { id: string } }) {
   try {
     await mongoose.connect(process.env.MONGODB_URI!);
     const session = await getServerSession(authOptions);
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await mongoose.connect(process.env.MONGODB_URI!);
     const session = await getServerSession(authOptions);
@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
     }
 
-    const { categoria, valor } = await req.json();
+    const { categoria, valor } = await request.json();
 
     const expense = await Expense.findOneAndUpdate(
       { _id: params.id, user: session.user.id },
