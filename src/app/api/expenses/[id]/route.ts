@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
 
-export async function GET( { params }: { params: { id: string } }) {
+export async function GET( context: { params: { id: string } }) {
   try {
     await mongoose.connect(process.env.MONGODB_URI!);
     const session = await getServerSession(authOptions);
@@ -13,7 +13,7 @@ export async function GET( { params }: { params: { id: string } }) {
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
     }
 
-    const expense = await Expense.findOne({ _id: params.id, user: session.user.id });
+    const expense = await Expense.findOne({ _id: context.params.id, user: session.user.id });
     if (!expense) {
       return NextResponse.json({ error: 'Gasto não encontrado.' }, { status: 404 });
     }
