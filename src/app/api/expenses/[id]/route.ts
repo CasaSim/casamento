@@ -4,16 +4,21 @@ import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
 
-export async function GET( { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     await mongoose.connect(process.env.MONGODB_URI!);
+    const params = await context.params;
+    const {id} = params; 
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.id) {
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
     }
 
-    const expense = await Expense.findOne({ _id: params.id, user: session.user.id });
+    const expense = await Expense.findOne({ _id: id, user: session.user.id });
     if (!expense) {
       return NextResponse.json({ error: 'Gasto não encontrado.' }, { status: 404 });
     }
@@ -24,9 +29,12 @@ export async function GET( { params }: { params: { id: string } }) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, 
+  context: { params: Promise<{ id: string }> }) {
   try {
     await mongoose.connect(process.env.MONGODB_URI!);
+    const params = await context.params;
+    const {id} = params;
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user?.id) {
@@ -51,10 +59,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, 
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     await mongoose.connect(process.env.MONGODB_URI!);
     const session = await getServerSession(authOptions);
+    const params = await context.params;
+    const {id} = params;
 
     if (!session || !session.user?.id) {
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
