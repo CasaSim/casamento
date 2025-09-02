@@ -17,7 +17,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchExpenses() {
       try {
-        const res = await fetch("/api/expenses");
+        const res = await fetch("/api/expenses/list");
         const data = await res.json();
         setExpenses(data);
       } catch (err) {

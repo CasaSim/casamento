@@ -16,7 +16,7 @@ export default function AdicionarGasto() {
       setError('Preencha todos os campos.');
       return;
     }
-    const res = await fetch('/api/expenses', {
+    const res = await fetch('/api/expenses/list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ categoria, valor: Number(valor) }),

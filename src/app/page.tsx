@@ -21,12 +21,21 @@ export default function Home() {
         <p className="text-lg text-white-700 mb-8 text-center max-w-xl">
           Organize seu casamento com praticidade, controle de gastos, fornecedores e agenda em um só lugar.
         </p>
+        <div className="flex gap-4">
         <button
-          className="px-8 py-3 bg-blue-500 text-white rounded-md text-lg font-semibold hover:bg-blue-600 transition-colors"
+          className="px-8 py-3 bg-blue-500 text-white rounded-md text-lg font-semibold hover:bg-blue-600 transition-colors "
           onClick={() => router.push('/auth/signin')}
         >
           Login
         </button>
+        
+        <button
+          className="px-8 py-3 bg-blue-500 text-white rounded-md text-lg font-semibold hover:bg-blue-600 transition-colors"
+          onClick={() => router.push('/Dashboard')}
+        >
+          Dashboard
+        </button>
+        </div>
       </main>
       <footer className="mt-16 text-black text-sm text-center relative z-10">
         &copy; {new Date().getFullYear()} CasaSim. Todos os direitos reservados.
