@@ -22,7 +22,7 @@ export default function AdicionarGasto() {
       body: JSON.stringify({ categoria, valor: Number(valor) }),
     });
     if (res.ok) {
-      router.push('/dashboard'); // Redireciona para a página do Dashboard
+      router.push('/Dashboard'); // Redireciona para a página do Dashboard
     } else {
       const data = await res.json();
       setError(data.error || 'Erro ao cadastrar gasto.');

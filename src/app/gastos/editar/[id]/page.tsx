@@ -37,7 +37,7 @@ export default function EditarGasto() {
       body: JSON.stringify({ categoria, valor: Number(valor) }),
     });
     if (res.ok) {
-      router.push('/dashboard');
+      router.push('/Dashboard');
     } else {
       const data = await res.json();
       setError(data.error || 'Erro ao editar gasto.');
