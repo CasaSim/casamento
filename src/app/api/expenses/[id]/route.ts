@@ -4,8 +4,9 @@ import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
 
-// Next.js 13+ API routes: params vêm como argumento separado
-export async function GET(req: Request, context: { params: { id: string } }) {
+// Next.js 13+ API routes: context pode ser uma Promise
+export async function GET(req: Request, contextPromise: Promise<{ params: { id: string } }>) {
+  const context = await contextPromise;
   await mongoose.connect(process.env.MONGODB_URI!);
   const session = await getServerSession(authOptions);
 
@@ -21,7 +22,8 @@ export async function GET(req: Request, context: { params: { id: string } }) {
   return NextResponse.json(expense, { status: 200 });
 }
 
-export async function PUT(req: Request, context: { params: { id: string } }) {
+export async function PUT(req: Request, contextPromise: Promise<{ params: { id: string } }>) {
+  const context = await contextPromise;
   await mongoose.connect(process.env.MONGODB_URI!);
   const session = await getServerSession(authOptions);
 
@@ -44,7 +46,8 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
   return NextResponse.json(expense, { status: 200 });
 }
 
-export async function DELETE(req: Request, context: { params: { id: string } }) {
+export async function DELETE(req: Request, contextPromise: Promise<{ params: { id: string } }>) {
+  const context = await contextPromise;
   await mongoose.connect(process.env.MONGODB_URI!);
   const session = await getServerSession(authOptions);
 
