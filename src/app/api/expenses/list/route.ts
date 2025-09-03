@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   }
 
   await mongoose.connect(process.env.MONGODB_URI!);
-  const { categoria, valor } = await req.json();
+  const { categoria, telefone, contato, valor } = await req.json();
 
   if (!categoria || !valor) {
     return NextResponse.json({ error: 'Preencha todos os campos.' }, { status: 400 });
@@ -27,6 +27,8 @@ export async function POST(req: Request) {
   // Cria o gasto e associa ao dashboard
   const expense = await Expense.create({
     categoria,
+    telefone,
+    contato,
     valor,
     user: session.user.id
   });
@@ -45,10 +47,10 @@ export async function GET(req: Request) {
 
   await mongoose.connect(process.env.MONGODB_URI!);
 
-  const dashboard = await Dashboard.findOne({ user: session.user.id }).populate('expenses');
-  if (!dashboard) {
+  const expenses = await Expense.find({ user: session.user.id });
+  if (!expenses) {
     return NextResponse.json([], { status: 200 });
   }
 
-  return NextResponse.json(dashboard.expenses, { status: 200 });
+  return NextResponse.json(expenses, { status: 200 });
 }

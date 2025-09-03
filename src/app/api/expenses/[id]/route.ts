@@ -41,11 +41,11 @@ export async function PUT(request: NextRequest,
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
     }
 
-    const { categoria, valor } = await request.json();
+    const { categoria, telefone, contato, valor } = await request.json();
 
     const expense = await Expense.findOneAndUpdate(
       { _id: params.id, user: session.user.id },
-      { categoria, valor },
+      { categoria, telefone, contato, valor },
       { new: true }
     );
 

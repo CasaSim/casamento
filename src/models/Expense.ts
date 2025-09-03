@@ -7,6 +7,8 @@ export interface IExpense extends Document {
   fornecedor?: mongoose.Types.ObjectId;
   data?: Date;
   descricao?: string;
+  telefone: string;
+  contato: string;
 }
 
 const ExpenseSchema: Schema = new Schema({
@@ -16,6 +18,8 @@ const ExpenseSchema: Schema = new Schema({
   fornecedor: { type: Schema.Types.ObjectId, ref: "Supplier" },
   data: { type: Date },
   descricao: { type: String },
+  telefone: { type: String },
+  contato: { type: String },
 });
 
 export default mongoose.models.Expense || mongoose.model<IExpense>("Expense", ExpenseSchema);
