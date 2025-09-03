@@ -14,7 +14,8 @@ Nextjs + Mongo.
 ## Features
 - Dashboard gastos + contatos [ok]
 - Agenda integrada [por implementar]
-- 
+- Esqueci o Password [Falta implementar envio de e-mail com password/session temporário e elaborar novo password]
+  
 ## Getting Started
 
 First, run the development server:
