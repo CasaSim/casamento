@@ -8,6 +8,7 @@ Nextjs + Mongo.
 
 ``` bash
   MONGODB_URI=KEYDOMONGODB
+  NEXTAUTH=keynextauth
 ```
 
 
