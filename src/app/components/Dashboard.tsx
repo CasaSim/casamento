@@ -67,7 +67,7 @@ export default function Dashboard() {
                     <td className="px-4 py-3 text-sm text-gray-900">{item.categoria}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.telefone}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{item.contato}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         <button
@@ -114,10 +114,10 @@ export default function Dashboard() {
             ))}
           </ul> */}
           <div className="text-right font-semibold text-lg text-black">
-            Total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            Total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <button
-        className="mb-4 px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600 transition-colors"
+        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
         onClick={() => router.push('/gastos/cadastrar')}
       >
         Cadastrar Gastos
