@@ -9,6 +9,8 @@ export default function EditarGasto() {
   const id = params?.id as string;
 
   const [categoria, setCategoria] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [contato, setContato] = useState('');
   const [valor, setValor] = useState('');
   const [error, setError] = useState('');
 
@@ -18,6 +20,8 @@ export default function EditarGasto() {
       if (res.ok) {
         const data = await res.json();
         setCategoria(data.categoria);
+        setTelefone(data.telefone || '');
+        setContato(data.contato || '');
         setValor(data.valor.toString());
       }
     }
@@ -34,7 +38,7 @@ export default function EditarGasto() {
     const res = await fetch(`/api/expenses/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categoria, valor: Number(valor) }),
+      body: JSON.stringify({ categoria, telefone, contato, valor: Number(valor) }),
     });
     if (res.ok) {
       router.push('/Dashboard');
@@ -63,6 +67,30 @@ export default function EditarGasto() {
             />
           </div>
           <div>
+            <label htmlFor="telefone" className="block text-sm font-medium text-black">Telefone</label>
+            <input
+              id="telefone"
+              name="telefone"
+              type="text"
+              value={telefone}
+              onChange={e => setTelefone(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              placeholder="Ex: (XX) XXXXX-XXXX"
+            />
+          </div>
+          <div>
+            <label htmlFor="contato" className="block text-sm font-medium text-black">Contato</label>
+            <input
+              id="contato"
+              name="contato"
+              type="text"
+              value={contato}
+              onChange={e => setContato(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              placeholder="Ex: Nome do Contato"
+            />
+          </div>
+          <div>
             <label htmlFor="valor" className="block text-sm font-medium text-black">Valor</label>
             <input
               id="valor"
@@ -85,6 +113,13 @@ export default function EditarGasto() {
             Salvar
           </button>
         </form>
+        <button
+            type="submit"
+            className="w-full py-2 px-4 bg-red-400 text-black rounded hover:bg-red-500 transition-colors"
+            onClick={() => router.back()}
+          >
+            Voltar
+          </button>
       </div>
     </div>
   );

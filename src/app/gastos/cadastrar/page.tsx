@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 export default function AdicionarGasto() {
   const [categoria, setCategoria] = useState('');
   const [valor, setValor] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [contato, setContato] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -16,10 +18,10 @@ export default function AdicionarGasto() {
       setError('Preencha todos os campos.');
       return;
     }
-    const res = await fetch('/api/expenses', {
+    const res = await fetch('/api/expenses/list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categoria, valor: Number(valor) }),
+      body: JSON.stringify({ categoria, valor: Number(valor), telefone, contato }),
     });
     if (res.ok) {
       router.push('/Dashboard'); // Redireciona para a página do Dashboard
@@ -58,6 +60,30 @@ export default function AdicionarGasto() {
               onChange={e => setValor(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
               placeholder="Ex: 5000"
+            />
+          </div>
+          <div>
+            <label htmlFor="telefone" className="block text-sm font-medium text-black">Telefone</label>
+            <input
+              id="telefone"
+              name="telefone"
+              type="text"
+              value={telefone}
+              onChange={e => setTelefone(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              placeholder="Ex: (XX) XXXXX-XXXX"
+            />
+          </div>
+          <div>
+            <label htmlFor="contato" className="block text-sm font-medium text-black">Contato</label>
+            <input
+              id="contato"
+              name="contato"
+              type="text"
+              value={contato}
+              onChange={e => setContato(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              placeholder="Ex: Nome do Contato"
             />
           </div>
           {error && (

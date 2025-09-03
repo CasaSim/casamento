@@ -78,9 +78,18 @@ export default function SignIn() {
           </button>
         </form>
         <div className="text-center mt-4">
+        <button
+            className="text-white hover:text-blue-200 font-medium"
+            onClick={() => window.location.href = '/auth/forgot'}
+          >
+            Esqueci a senha
+          </button>
+          </div>
+
+        <div className="text-center mt-4">
           <button
             className="text-blue-600 hover:text-blue font-medium"
-            onClick={() => window.location.href = '/Dashboard'}
+            onClick={() => window.location.href = '/auth/signup'}
           >
             Cadastre-se
           </button>

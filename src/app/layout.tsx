@@ -6,8 +6,8 @@ import AuthProvider from './components/AuthProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'WeddingCRM - Sistema de Gestão para Casamentos',
-  description: 'Gerencie seus clientes e eventos de casamento com facilidade',
+  title: 'CasaSim - Sistema de Gestão para Casamentos',
+  description: 'Gerencie seu casamento like a boss!',
 };
 
 export default function RootLayout({
