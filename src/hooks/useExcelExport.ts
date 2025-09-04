@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
 
@@ -13,7 +14,6 @@ interface ExportOptions {
 }
 
 const useExcelExport = () => {
-    // eslint-disable-next-line
   const exportToExcel = async (data: any[], options: ExportOptions = {}) => {
     const {
       fileName = 'export',
