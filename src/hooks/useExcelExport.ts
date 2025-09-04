@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
 
