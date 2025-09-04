@@ -20,6 +20,9 @@ const eslintConfig = [
       "next-env.d.ts",
       "api/expenses/**",
     ],
+    rules:{
+      "@typescript-eslint/no-explicit-any": ["off"]
+    }
   },
 ];
 

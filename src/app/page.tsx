@@ -1,11 +1,13 @@
 'use client';
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function Home() {
   const router = useRouter();
 
   return (
+    <>
     <div
       className="min-h-screen flex flex-col items-center justify-center relative bg-gray-800 p-8 overflow-hidden"
     >
@@ -15,7 +17,7 @@ export default function Home() {
         alt="Casamento"
         className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
         style={{ zIndex: 0 }}
-      />
+      /> 
       <main className="flex flex-col items-center gap-8 relative z-10">
         <h1 className="text-5xl font-extrabold text-blue-500 mb-4">CasaSim</h1>
         <p className="text-lg text-white-700 mb-8 text-center max-w-xl">
@@ -41,5 +43,6 @@ export default function Home() {
         &copy; {new Date().getFullYear()} CasaSim. Todos os direitos reservados.
       </footer>
     </div>
+    </>
   );
 }
