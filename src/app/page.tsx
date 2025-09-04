@@ -12,9 +12,7 @@ export default function Home() {
       className="min-h-screen flex flex-col items-center justify-center relative bg-gray-800 p-8 overflow-hidden"
     >
       {/* Imagem de fundo sutil */}
-      <Image
-        width={visualViewport?.width || 1920}
-        height={visualViewport?.height || 1080}
+      <img
         src="/landing.jpg"
         alt="Casamento"
         className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none"
