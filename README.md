@@ -1,3 +1,4 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=CasaSim_casamento&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=CasaSim_casamento)
 # Sobre
 ## CasaSim
 Projeto Open Source para pessoas que querem fazer a gestão de seu casamento, mas que não abrem mão de cuidar de seus dados.
