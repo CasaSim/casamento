@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ExportButton from "./ExportButton";
+import useExcelExport from "@/hooks/useExcelExport";
 
 interface Expense {
   _id: string;
@@ -15,6 +17,8 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { exportToExcel } = useExcelExport();
+
 
   useEffect(() => {
     async function fetchExpenses() {
@@ -33,6 +37,25 @@ export default function Dashboard() {
 
   const total = expenses.reduce((acc, item) => acc + item.valor, 0);
 
+  const exportData = expenses.map((item, index) => ({
+    '#': index + 1,
+    'Categoria': item.categoria,
+    'Contato': item.contato || 'N/A',
+    'Telefone': item.telefone || 'N/A',
+    'Valor (R$)': item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2}) 
+  }));
+   if (exportData.length > 0) {
+    exportData.push({
+      '#': 0,
+      'Categoria': 'TOTAL',
+      'Contato': '',
+      'Telefone': '',
+      'Valor (R$)': expenses.reduce((acc, item) => acc + item.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2})
+
+    });
+  }
+
+
   const handleDelete = async (id: string) => {
     const res = await fetch(`/api/expenses/${id}`, {
       method: 'DELETE',
@@ -45,6 +68,16 @@ export default function Dashboard() {
   return (
     <div className="p-8 bg-white rounded-lg shadow-md w-full ">
       <h1 className="text-2xl font-bold mb-4 text-black">Dashboard de Gastos</h1>
+      <div className="flex gap-4">
+          <ExportButton 
+            data={exportData}
+            fileName="gastos-casamento"
+            sheetName="Gastos"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+            disabled={loading || expenses.length === 0}
+          />
+          
+        </div>
       
       {loading ? (
         <div>Carregando...</div>
