@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ExportButton from "./ExportButton";
-import useExcelExport from "@/hooks/useExcelExport";
+
 
 interface Expense {
   _id: string;
@@ -17,7 +17,7 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { exportToExcel } = useExcelExport();
+
 
 
   useEffect(() => {

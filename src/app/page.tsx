@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
 
 export default function Home() {
   const router = useRouter();
 
   return (
-    <>
+    
     <div
       className="min-h-screen flex flex-col items-center justify-center relative bg-gray-800 p-8 overflow-hidden"
     >
@@ -43,6 +43,6 @@ export default function Home() {
         &copy; {new Date().getFullYear()} CasaSim. Todos os direitos reservados.
       </footer>
     </div>
-    </>
+    
   );
 }
