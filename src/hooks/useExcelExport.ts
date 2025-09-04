@@ -13,6 +13,7 @@ interface ExportOptions {
 }
 
 const useExcelExport = () => {
+    // eslint-disable-next-line
   const exportToExcel = async (data: any[], options: ExportOptions = {}) => {
     const {
       fileName = 'export',
