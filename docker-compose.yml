@@ -1,0 +1,18 @@
+# Banco MongoDB para ambiente de desenvolvimento local
+# Para rodar, use o comando: docker-compose up -d
+# Para parar, use: docker-compose down
+services:
+  mongodb:
+    image: mongo:latest
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: test
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
