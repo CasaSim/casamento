@@ -1,70 +1,11 @@
-name: Snyk Security Scan
-
-on:
-  push:
-    branches: [ main, dev ]  # Adapte para os nomes dos seus branches principais
-  pull_request:
-    branches: [ main, dev ]  # Escaneia PRs direcionados a esses branches
-  schedule:
-    - cron: '0 0 * * 1'         # Executa semanalmente às segundas-feiras à meia-noite (UTC)
-
+name: Workflow for Node using Snyk
+on: push
 jobs:
-  snyk-open-source-scan:
-    name: Snyk Open Source Security Scan
+  security:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Executar Snyk para verificar vulnerabilidades (Open Source)
+      - uses: actions/checkout@master
+      - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_KEY }}
-        with:
-          # Comando padrão é 'test'. Isso verifica vulnerabilidades e falha se problemas forem encontrados.
-          command: test
-          # Argumentos opcionais: relatar apenas vulnerabilidades de alta gravidade e gerar arquivo SARIF
-          args: --severity-threshold=high --sarif-file-output=snyk-open-source.sarif
-
-      - name: Fazer upload dos resultados para GitHub Code Scanning (SARIF)
-        uses: github/codeql-action/upload-sarif@v3
-        if: always() # Garante que o upload acontece mesmo se o Snyk falhar
-        with:
-          sarif_file: snyk-open-source.sarif
-
-  snyk-code-scan:
-    name: Snyk Code Security Scan (SAST)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Executar Snyk Code Analysis
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_KEY }}
-        with:
-          command: code test
-          args: --sarif-file-output=snyk-code.sarif
-
-      - name: Fazer upload dos resultados do Snyk Code para GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: snyk-code.sarif
-
-  # 🔁 Exemplo de job adicional para monitorar dependências no Snyk (envia dados para a plataforma Snyk)
-  snyk-monitor-dependencies:
-    name: Monitorar dependências no Snyk
-    runs-on: ubuntu-latest
-    needs: snyk-open-source-scan # Opcional: pode depender do scan inicial
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Monitorar dependências no Snyk
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_KEY }}
-        with:
-          command: monitor
