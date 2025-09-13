@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { LogIn } from 'lucide-react';
+import { Suspense } from 'react';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -35,6 +36,7 @@ export default function SignIn() {
             Gerencie seu casamento com facilidade
           </p>
         </div>
+        <Suspense fallback={<div>Loading...</div>}>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -76,7 +78,8 @@ export default function SignIn() {
             <LogIn className="w-5 h-5 mr-2 bg-white rounded-full" />
             Entrar
           </button>
-        </form>
+        </form>          
+        </Suspense>
         <div className="text-center mt-4">
         <button
             className="text-white hover:text-blue-200 font-medium"

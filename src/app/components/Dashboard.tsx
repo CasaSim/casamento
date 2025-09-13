@@ -25,7 +25,7 @@ export default function Dashboard() {
       try {
         const res = await fetch("/api/expenses/list");
         const data = await res.json();
-        setExpenses(data);
+        setExpenses(Array.isArray(data) ? data : []);
       } catch (err) {
         setExpenses([]);
       } finally {

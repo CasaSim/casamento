@@ -62,7 +62,7 @@ export default function EditarGasto() {
               required
               value={categoria}
               onChange={e => setCategoria(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: Buffet"
             />
           </div>
@@ -74,7 +74,7 @@ export default function EditarGasto() {
               type="text"
               value={telefone}
               onChange={e => setTelefone(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: (XX) XXXXX-XXXX"
             />
           </div>
@@ -86,7 +86,7 @@ export default function EditarGasto() {
               type="text"
               value={contato}
               onChange={e => setContato(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: Nome do Contato"
             />
           </div>
@@ -99,7 +99,7 @@ export default function EditarGasto() {
               required
               value={valor}
               onChange={e => setValor(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: 5000"
             />
           </div>
