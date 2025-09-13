@@ -1,36 +1,49 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import FormData from 'form-data';
 import User from '@/models/User';
-import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 import crypto from 'crypto';
+import Mailgun from 'mailgun.js';
+
+const mailgun = new Mailgun(FormData);
+const mg = mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_KEY!,
+});
 
 export async function POST(req: Request) {
   await mongoose.connect(process.env.MONGODB_URI!);
   const { email } = await req.json();
 
-  if (!email) {
-    return NextResponse.json({ error: 'Email é obrigatório.' }, { status: 400 });
+  const user = await User.findOne({ email });
+  if (!user) {
+    return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
   }
 
-  const existingUser = await User.findOne({ email });
+  // Gere um token seguro
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenExpire = Date.now() + 1000 * 60 * 60; // 1 hora
 
-  if (existingUser) {
-    // Generate a temporary password
-    const temporaryPassword = crypto.randomBytes(8).toString('hex'); // 16 characters long
-    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+  user.resetPasswordToken = token;
+  user.resetPasswordExpires = tokenExpire;
+  await user.save();
 
-    // Update user's password in the database
-    existingUser.password = hashedPassword;
-    await existingUser.save();
+  const resetUrl = `${process.env.URL}auth/reset-password?token=${token}`;
 
-    // Simulate sending a reset link with the temporary password
-    console.log(`Password reset initiated for email: ${email}`);
-    console.log(`Temporary password for ${email}: ${temporaryPassword}`);
-    console.log(`Simulated reset link: http://localhost:3000/auth/reset-password?token=${temporaryPassword}`); // Example link
-  }
+  const emailData = await mg.messages.create(
+    process.env.MAILGUN_DOMAIN!, {
+    from: 'Mailgun Sandbox <postmaster@sandbox7f416caa20524ce3adeab5e517a9b94f.mailgun.org>',
+    to: email,
+    subject: 'Recuperação de senha',
+    html: `
+      <p>Você solicitou a redefinição de senha.</p>
+      <p>Clique no link abaixo para redefinir sua senha:</p>
+      <a href="${resetUrl}">${resetUrl}</a>
+      <p>Se não foi você, ignore este e-mail.</p>
+    `,
+  });
 
-  return NextResponse.json(
-    { message: 'Se um usuário com este email existir, um link para redefinir a senha será enviado.' },
-    { status: 200 }
-  );
+  console.log('Email enviado:', emailData);
+
+  return NextResponse.json({ message: 'E-mail de recuperação enviado.' });
 }
