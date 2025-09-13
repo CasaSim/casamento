@@ -9,9 +9,10 @@ Nextjs + Mongo.
 
 ``` bash
   MONGODB_URI=KEYDOMONGODB
-  NEXTAUTH=keynextauth
-```
+  NEXTAUTH_SECRET=keynextauth
 
+(gerar via openssl rand -base64 32)
+```
 
 ## Features
 - Dashboard gastos + contatos [ok]
