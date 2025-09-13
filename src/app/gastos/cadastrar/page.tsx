@@ -45,7 +45,7 @@ export default function AdicionarGasto() {
               required
               value={categoria}
               onChange={e => setCategoria(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: Buffet"
             />
           </div>
@@ -58,7 +58,7 @@ export default function AdicionarGasto() {
               required
               value={valor}
               onChange={e => setValor(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: 5000"
             />
           </div>
@@ -70,7 +70,7 @@ export default function AdicionarGasto() {
               type="text"
               value={telefone}
               onChange={e => setTelefone(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: (XX) XXXXX-XXXX"
             />
           </div>
@@ -82,7 +82,7 @@ export default function AdicionarGasto() {
               type="text"
               value={contato}
               onChange={e => setContato(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-pink-500 focus:border-pink-500 text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: Nome do Contato"
             />
           </div>
@@ -91,7 +91,7 @@ export default function AdicionarGasto() {
           )}
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-pink-500 text-white rounded hover:bg-pink-600 transition-colors"
+            className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
             Cadastrar
           </button>
