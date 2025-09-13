@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense} from 'react';
 import { signIn } from 'next-auth/react';
 import { LogIn } from 'lucide-react';
-import { Suspense } from 'react';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
