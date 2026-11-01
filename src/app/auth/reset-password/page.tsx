@@ -50,7 +50,7 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow max-w-md w-full">
         <h2 className="text-2xl font-bold mb-4 text-blue-600 text-center">Redefinir Senha</h2>
         <input
-          type="password"
+          type="password" minLength={12} autoComplete="new-password" title="Use pelo menos 12 caracteres e no máximo 72 bytes."
           placeholder="Nova senha"
           value={password}
           onChange={e => setPassword(e.target.value)}
@@ -58,7 +58,7 @@ function ResetPasswordForm() {
           className="w-full mb-4 px-3 py-2 border rounded text-black"
         />
         <input
-          type="password"
+          type="password" minLength={12} autoComplete="new-password" title="Use pelo menos 12 caracteres e no máximo 72 bytes."
           placeholder="Confirme a nova senha"
           value={confirm}
           onChange={e => setConfirm(e.target.value)}

@@ -1,23 +1,22 @@
 import { NextResponse } from 'next/server';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
-import mongoose from 'mongoose';
+import { emailAddress, jsonBody, passwordValue, rateLimit, safeRoute, text } from '@/lib/security';
 
 export async function POST(req: Request) {
-  await mongoose.connect(process.env.MONGODB_URI!);
-  const { name, email, password } = await req.json();
-
-  if (!name || !email || !password) {
-    return NextResponse.json({ error: 'Preencha todos os campos.' }, { status: 400 });
-  }
-
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return NextResponse.json({ error: 'Email já cadastrado.' }, { status: 400 });
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await User.create({ name, email, password: hashedPassword });
-
-  return NextResponse.json({ message: 'Usuário cadastrado com sucesso.' }, { status: 201 });
+  return safeRoute(async () => {
+    const body = await jsonBody(req);
+    const email = emailAddress(body.email);
+    const name = text(body.name, 120);
+    const password = passwordValue(body.password);
+    await rateLimit('signup-global', 'all', 100);
+    await rateLimit('signup', email, 5);
+    const hashed = await bcrypt.hash(password, 12);
+    try {
+      await User.create({ name, email, password: hashed });
+    } catch (error) {
+      if ((error as { code?: number }).code !== 11000) throw error;
+    }
+    return NextResponse.json({ message: 'Se o e-mail estiver disponível, o cadastro foi realizado. Faça login ou recupere sua senha.' }, { status: 201 });
+  });
 }

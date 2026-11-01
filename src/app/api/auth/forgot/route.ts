@@ -1,49 +1,40 @@
 import { NextResponse } from 'next/server';
 import FormData from 'form-data';
 import User from '@/models/User';
-import mongoose from 'mongoose';
-import crypto from 'crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import Mailgun from 'mailgun.js';
-
-const mailgun = new Mailgun(FormData);
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_KEY!,
-});
+import { emailAddress, jsonBody, rateLimit, safeRoute } from '@/lib/security';
 
 export async function POST(req: Request) {
-  await mongoose.connect(process.env.MONGODB_URI!);
-  const { email } = await req.json();
-
-  const user = await User.findOne({ email });
-  if (!user) {
-    return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
-  }
-
-  // Gere um token seguro
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenExpire = Date.now() + 1000 * 60 * 60; // 1 hora
-
-  user.resetPasswordToken = token;
-  user.resetPasswordExpires = tokenExpire;
-  await user.save();
-
-  const resetUrl = `${process.env.URL}auth/reset-password?token=${token}`;
-
-  const emailData = await mg.messages.create(
-    process.env.MAILGUN_DOMAIN!, {
-    from: 'Mailgun Sandbox <postmaster@sandbox7f416caa20524ce3adeab5e517a9b94f.mailgun.org>',
-    to: email,
-    subject: 'Recuperação de senha',
-    html: `
-      <p>Você solicitou a redefinição de senha.</p>
-      <p>Clique no link abaixo para redefinir sua senha:</p>
-      <a href="${resetUrl}">${resetUrl}</a>
-      <p>Se não foi você, ignore este e-mail.</p>
-    `,
+  return safeRoute(async () => {
+    const email = emailAddress((await jsonBody(req)).email);
+    await rateLimit('forgot-global', 'all', 100);
+    await rateLimit('forgot', email, 3);
+    const response = { message: 'Se o e-mail estiver cadastrado, você receberá as instruções de recuperação.' };
+    const base = new URL(process.env.NEXTAUTH_URL || process.env.URL!);
+    if (process.env.NODE_ENV === 'production' && base.protocol !== 'https:') throw new Error('HTTPS required');
+    const user = await User.findOne({ email });
+    if (!user) return NextResponse.json(response);
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    await User.updateOne({ _id: user._id }, { $set: {
+      resetPasswordToken: tokenHash, resetPasswordExpires: new Date(Date.now() + 3600000),
+    } });
+    const url = new URL('/auth/reset-password', base);
+    url.searchParams.set('token', token);
+    try {
+      const mg = new Mailgun(FormData).client({ username: 'api', key: process.env.MAILGUN_KEY! });
+      await mg.messages.create(process.env.MAILGUN_DOMAIN!, {
+        from: `CasaSim <postmaster@${process.env.MAILGUN_DOMAIN}>`, to: email,
+        subject: 'Recuperação de senha',
+        text: `Para redefinir sua senha, acesse: ${url.toString()}\nSe não foi você, ignore este e-mail.`,
+      });
+    } catch {
+      await User.updateOne({ _id: user._id, resetPasswordToken: tokenHash }, {
+        $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 },
+      });
+      console.error('Password recovery delivery failed');
+    }
+    return NextResponse.json(response);
   });
-
-  console.log('Email enviado:', emailData);
-
-  return NextResponse.json({ message: 'E-mail de recuperação enviado.' });
 }

@@ -20,7 +20,7 @@ export default function SignUp() {
     });
     const data = await res.json();
     if (res.ok) {
-      setSuccess('Cadastro realizado com sucesso! Faça login.');
+      setSuccess(data.message);
       setName('');
       setEmail('');
       setPassword('');
@@ -73,7 +73,7 @@ export default function SignUp() {
               <input
                 id="password"
                 name="password"
-                type="password"
+                type="password" minLength={12} autoComplete="new-password" title="Use pelo menos 12 caracteres e no máximo 72 bytes."
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
