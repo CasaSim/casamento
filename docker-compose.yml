@@ -1,30 +1,50 @@
-# Banco MongoDB para ambiente de desenvolvimento local
-# Para rodar, use o comando: docker-compose up -d
-# Para parar, use: docker-compose down
+# Local development only. Set credentials in .env before starting.
 services:
-  mongodb:
-    image: mongo:latest
+  app:
+    build: .
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: test
+      MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASSWORD}@mongodb:27017/casamento?authSource=casamento
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?Set NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET}
+      MAILGUN_KEY: ${MAILGUN_KEY:-}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN:-}
     ports:
-      - "27017:27017"
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+  mongodb:
+    image: mongo:8
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?Set MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: casamento
+      MONGO_APP_USER: ${MONGO_APP_USER:?Set MONGO_APP_USER}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set MONGO_APP_PASSWORD}
+    ports:
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongodb_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/app-user.js:ro
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   mongo_admin:
-  # U: admin P: pass
-    image: mongo-express:latest
+    image: mongo-express:1
     restart: unless-stopped
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: password
-      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_URL: ${MONGO_ADMIN_URL:?Set MONGO_ADMIN_URL with URL-encoded credentials}
+      ME_CONFIG_BASICAUTH_ENABLED: 'true'
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_ADMIN_USER:?Set MONGO_ADMIN_USER}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_ADMIN_PASSWORD:?Set MONGO_ADMIN_PASSWORD}
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     depends_on:
-      - mongodb
-
+      mongodb:
+        condition: service_healthy
 volumes:
   mongodb_data:

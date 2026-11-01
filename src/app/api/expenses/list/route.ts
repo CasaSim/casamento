@@ -1,56 +1,27 @@
 import { NextResponse } from 'next/server';
 import Expense from '@/models/Expense';
 import Dashboard from '@/models/Dashboard';
-import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
+import { connectDB, expenseValues, HttpError, jsonBody, safeRoute } from '@/lib/security';
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-  }
-
-  await mongoose.connect(process.env.MONGODB_URI!);
-  const { categoria, telefone, contato, valor } = await req.json();
-
-  if (!categoria || !valor) {
-    return NextResponse.json({ error: 'Preencha todos os campos.' }, { status: 400 });
-  }
-
-  // Busca ou cria o dashboard do usuário
-  let dashboard = await Dashboard.findOne({ user: session.user.id });
-  if (!dashboard) {
-    dashboard = await Dashboard.create({ user: session.user.id, expenses: [] });
-  }
-
-  // Cria o gasto e associa ao dashboard
-  const expense = await Expense.create({
-    categoria,
-    telefone,
-    contato,
-    valor,
-    user: session.user.id
+  return safeRoute(async () => {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new HttpError(401, 'Não autorizado.');
+    const values = expenseValues(await jsonBody(req));
+    await connectDB();
+    const expense = await Expense.create({ ...values, user: session.user.id });
+    await Dashboard.updateOne({ user: session.user.id }, { $push: { expenses: expense._id } }, { upsert: true });
+    return NextResponse.json(expense, { status: 201 });
   });
-
-  dashboard.expenses.push(expense._id);
-  await dashboard.save();
-
-  return NextResponse.json(expense, { status: 201 });
 }
 
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-  }
-
-  await mongoose.connect(process.env.MONGODB_URI!);
-
-  const expenses = await Expense.find({ user: session.user.id });
-  if (!expenses) {
-    return NextResponse.json([], { status: 200 });
-  }
-
-  return NextResponse.json(expenses, { status: 200 });
+export async function GET() {
+  return safeRoute(async () => {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new HttpError(401, 'Não autorizado.');
+    await connectDB();
+    return NextResponse.json(await Expense.find({ user: session.user.id }));
+  });
 }

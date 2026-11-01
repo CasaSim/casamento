@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "rm -rf .next && next build --turbopack",
-    "build:force": "rm -rf .next && rm -rf node_modules/.cache && npm run build",
+    "build": "next build --turbopack",
+    "build:force": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:security": "node --test tests/security.cjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@next-auth/mongodb-adapter": "^1.1.3",
@@ -15,13 +17,18 @@
     "bcryptjs": "^3.0.2",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
+    "form-data": "^4.0.6",
     "lucide-react": "^0.542.0",
     "mailgun.js": "^12.0.3",
-    "mongoose": "^8.18.1",
-    "next": "15.5.2",
-    "next-auth": "^4.24.11",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "mongoose": "^8.24.7",
+    "next": "^15.5.28",
+    "next-auth": "^4.24.15",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "overrides": {
+    "postcss": "^8.5.23",
+    "exceljs": { "uuid": "^11.1.1" }
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -31,7 +38,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.2",
+    "eslint-config-next": "^15.5.28",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

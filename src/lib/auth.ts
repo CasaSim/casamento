@@ -1,60 +1,43 @@
 import { NextAuthOptions } from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
-import clientPromise from './mongodb';
-import User from '@/models/User'; // ajuste o caminho se necessário
+import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { connectDB, emailAddress, rateLimit } from './security';
+
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise),
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email", placeholder: "seu@email.com" },
-        password: { label: "Senha", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-        const user = await User.findOne({ email: credentials.email });
-        if (!user) return null;
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) return null;
+  providers: [CredentialsProvider({
+    name: 'Credentials',
+    credentials: { email: { label: 'Email', type: 'email' }, password: { label: 'Senha', type: 'password' } },
+    async authorize(credentials) {
+      try {
+        const email = emailAddress(credentials?.email);
+        const password = credentials?.password;
+        if (typeof password !== 'string' || !password || Buffer.byteLength(password) > 72) return null;
+        await rateLimit('login-global', 'all', 500);
+        await rateLimit('login', email, 10);
+        const user = await User.findOne({ email });
+        // Perform bcrypt even for unknown accounts to reduce timing differences.
+        const hash = user?.password || '$2b$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW';
+        const valid = await bcrypt.compare(password, hash);
+        if (!user?.password || !valid) return null;
         return { id: user._id.toString(), name: user.name, email: user.email };
-      }
-    }),
-  ],
-  session: {
-    strategy: 'jwt',
-  },
-  pages: {
-    signIn: '/auth/signin',
-    signOut: '/auth/signout',
-    error: '/auth/error',
-  },
-  callbacks: {
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.sub as string;
-      }
-      return session;
+      } catch { return null; }
     },
+  })],
+  session: { strategy: 'jwt', maxAge: 2 * 60 * 60 },
+  pages: { signIn: '/auth/signin' },
+  callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
+      await connectDB();
+      const account = await User.findById(user?.id || token.sub).select('sessionVersion');
+      if (user) token.sessionVersion = account?.sessionVersion ?? 0;
+      if (!account || (token.sessionVersion ?? 0) !== (account.sessionVersion ?? 0)) throw new Error('Session revoked');
       return token;
     },
-  },
-  events: {
-    async createUser({ user }) {
-      console.log('Novo usuário criado:', user.email);
+    async session({ session, token }) {
+      if (session.user && token.sub) session.user.id = token.sub;
+      return session;
     },
   },
 };
-
 export default authOptions;

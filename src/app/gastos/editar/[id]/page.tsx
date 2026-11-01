@@ -9,6 +9,8 @@ export default function EditarGasto() {
   const id = params?.id as string;
 
   const [categoria, setCategoria] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [dataGasto, setDataGasto] = useState('');
   const [telefone, setTelefone] = useState('');
   const [contato, setContato] = useState('');
   const [valor, setValor] = useState('');
@@ -20,6 +22,8 @@ export default function EditarGasto() {
       if (res.ok) {
         const data = await res.json();
         setCategoria(data.categoria);
+        setDescricao(data.descricao || '');
+        setDataGasto(data.data ? data.data.slice(0, 10) : '');
         setTelefone(data.telefone || '');
         setContato(data.contato || '');
         setValor(data.valor.toString());
@@ -38,7 +42,7 @@ export default function EditarGasto() {
     const res = await fetch(`/api/expenses/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categoria, telefone, contato, valor: Number(valor) }),
+      body: JSON.stringify({ categoria, descricao, data: dataGasto, telefone, contato, valor: Number(valor) }),
     });
     if (res.ok) {
       router.push('/Dashboard');
@@ -101,6 +105,30 @@ export default function EditarGasto() {
               onChange={e => setValor(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: 5000"
+            />
+          </div>
+          <div>
+            <label htmlFor="descricao" className="block text-sm font-medium text-black">Descrição</label>
+            <textarea
+              id="descricao"
+              name="descricao"
+              value={descricao}
+              onChange={e => setDescricao(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              placeholder="Ex: Entrada do buffet para 100 convidados"
+            />
+          </div>
+          <div>
+            <label htmlFor="data" className="block text-sm font-medium text-black">Data</label>
+            <input
+              id="data"
+              name="data"
+              type="date"
+              value={dataGasto}
+              onChange={e => setDataGasto(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
             />
           </div>
           {error && (

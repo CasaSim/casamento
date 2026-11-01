@@ -1,88 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Expense from '@/models/Expense';
-import mongoose from 'mongoose';
+import Dashboard from '@/models/Dashboard';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
+import { connectDB, expenseValues, HttpError, jsonBody, safeRoute } from '@/lib/security';
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI!);
-    const params = await context.params;
-    const {id} = params; 
+type Context = { params: Promise<{ id: string }> };
+
+async function handle(request: NextRequest, context: Context, method: 'GET' | 'PUT' | 'DELETE') {
+  return safeRoute(async () => {
     const session = await getServerSession(authOptions);
-
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+    if (!session?.user?.id) throw new HttpError(401, 'Não autorizado.');
+    const { id } = await context.params;
+    if (!/^[a-f0-9]{24}$/i.test(id)) throw new HttpError(400, 'Identificador inválido.');
+    const values = method === 'PUT' ? expenseValues(await jsonBody(request)) : undefined;
+    if (method === 'DELETE') {
+      const origin = request.headers.get('origin');
+      if ((origin && origin !== new URL(process.env.NEXTAUTH_URL || request.url).origin) || request.headers.get('sec-fetch-site') === 'cross-site') {
+        throw new HttpError(403, 'Origem não permitida.');
+      }
     }
-
-    const expense = await Expense.findOne({ _id: id, user: session.user.id });
-    if (!expense) {
-      return NextResponse.json({ error: 'Gasto não encontrado.' }, { status: 404 });
+    await connectDB();
+    // Always bind the object identifier to its authenticated owner.
+    const filter = { _id: id, user: session.user.id };
+    const expense = method === 'PUT'
+      ? await Expense.findOneAndUpdate(filter, { $set: values }, { new: true, runValidators: true })
+      : method === 'DELETE' ? await Expense.findOneAndDelete(filter) : await Expense.findOne(filter);
+    if (!expense) throw new HttpError(404, 'Gasto não encontrado.');
+    if (method === 'DELETE') {
+      await Dashboard.updateOne({ user: session.user.id }, { $pull: { expenses: expense._id } });
+      return NextResponse.json({ message: 'Gasto deletado com sucesso.' });
     }
-
-    return NextResponse.json(expense, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
-  }
+    return NextResponse.json(expense);
+  });
 }
-
-export async function PUT(request: NextRequest, 
-  context: { params: Promise<{ id: string }> }) {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI!);
-    const params = await context.params;
-    const {id} = params;
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-    }
-
-    const { categoria, telefone, contato, valor } = await request.json();
-
-    const expense = await Expense.findOneAndUpdate(
-      { _id: params.id, user: session.user.id },
-      { categoria, telefone, contato, valor },
-      { new: true }
-    );
-
-    if (!expense) {
-      return NextResponse.json({ error: 'Gasto não encontrado ou não autorizado.' }, { status: 404 });
-    }
-
-    return NextResponse.json(expense, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: NextRequest, 
-  context: { params: Promise<{ id: string }> }
-) {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI!);
-    const session = await getServerSession(authOptions);
-    const params = await context.params;
-    const {id} = params;
-
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
-    }
-
-    const expense = await Expense.findOneAndDelete({
-      _id: params.id,
-      user: session.user.id,
-    });
-
-    if (!expense) {
-      return NextResponse.json({ error: 'Gasto não encontrado ou não autorizado.' }, { status: 404 });
-    }
-
-    return NextResponse.json({ message: 'Gasto deletado com sucesso.' }, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 });
-  }
-}
+export async function GET(req: NextRequest, context: Context) { return handle(req, context, 'GET'); }
+export async function PUT(req: NextRequest, context: Context) { return handle(req, context, 'PUT'); }
+export async function DELETE(req: NextRequest, context: Context) { return handle(req, context, 'DELETE'); }

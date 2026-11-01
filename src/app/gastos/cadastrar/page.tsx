@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 export default function AdicionarGasto() {
   const [categoria, setCategoria] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [dataGasto, setDataGasto] = useState('');
   const [valor, setValor] = useState('');
   const [telefone, setTelefone] = useState('');
   const [contato, setContato] = useState('');
@@ -21,7 +23,7 @@ export default function AdicionarGasto() {
     const res = await fetch('/api/expenses/list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categoria, valor: Number(valor), telefone, contato }),
+      body: JSON.stringify({ categoria, descricao, data: dataGasto, valor: Number(valor), telefone, contato }),
     });
     if (res.ok) {
       router.push('/Dashboard'); // Redireciona para a página do Dashboard
@@ -84,6 +86,30 @@ export default function AdicionarGasto() {
               onChange={e => setContato(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Ex: Nome do Contato"
+            />
+          </div>
+          <div>
+            <label htmlFor="descricao" className="block text-sm font-medium text-black">Descrição</label>
+            <textarea
+              id="descricao"
+              name="descricao"
+              value={descricao}
+              onChange={e => setDescricao(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              placeholder="Ex: Entrada do buffet para 100 convidados"
+            />
+          </div>
+          <div>
+            <label htmlFor="data" className="block text-sm font-medium text-black">Data</label>
+            <input
+              id="data"
+              name="data"
+              type="date"
+              value={dataGasto}
+              onChange={e => setDataGasto(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
             />
           </div>
           {error && (

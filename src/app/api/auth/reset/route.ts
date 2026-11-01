@@ -1,28 +1,27 @@
 import { NextResponse } from 'next/server';
 import User from '@/models/User';
-import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
+import { HttpError, jsonBody, passwordValue, rateLimit, safeRoute, text } from '@/lib/security';
 
 export async function POST(req: Request) {
-  await mongoose.connect(process.env.MONGODB_URI!);
-  const { token, password } = await req.json();
-
-  const user = await User.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpires: { $gt: Date.now() },
-  }).then(user => {
-      if (!user) {  
-        return NextResponse.json({ error: 'Token inválido ou expirado.' }, { status: 400 });
-  }   
-    user.password = bcrypt.hash(password, 10);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    user.save();
-
+  return safeRoute(async () => {
+    const body = await jsonBody(req);
+    const token = text(body.token, 64);
+    if (!/^[a-f0-9]{64}$/.test(token)) throw new HttpError(400, 'Token inválido ou expirado.');
+    const password = passwordValue(body.password);
+    await rateLimit('reset-global', 'all', 100);
+    const hashed = await bcrypt.hash(password, 12);
+    // Consume the token atomically: concurrent requests cannot reuse it.
+    const user = await User.findOneAndUpdate({
+      resetPasswordToken: createHash('sha256').update(token).digest('hex'),
+      resetPasswordExpires: { $gt: new Date() },
+    }, {
+      $set: { password: hashed },
+      $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 },
+      $inc: { sessionVersion: 1 },
+    });
+    if (!user) throw new HttpError(400, 'Token inválido ou expirado.');
+    return NextResponse.json({ message: 'Senha redefinida com sucesso.' });
   });
-
-
-
-
-  return NextResponse.json({ message: 'Senha redefinida com sucesso.' });
 }

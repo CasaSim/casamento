@@ -7,6 +7,7 @@ export interface IUser extends Document {
   googleId?: string; // se usar Google Auth
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  sessionVersion?: number;
 }
 
 const UserSchema: Schema = new Schema({
@@ -16,6 +17,7 @@ const UserSchema: Schema = new Schema({
   googleId: { type: String },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  sessionVersion: { type: Number, default: 0 },
 });
 
 export default mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
