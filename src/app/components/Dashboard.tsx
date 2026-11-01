@@ -21,7 +21,7 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
 
-export default function Dashboard({ publicId }: { publicId?: string }) {
+export default function Dashboard({ publicId }: Readonly<{ publicId?: string }>) {
   const readOnly = publicId !== undefined;
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ export default function Dashboard({ publicId }: { publicId?: string }) {
         setLoading(false);
       }
     }
-    fetchExpenses();
+    void fetchExpenses();
   }, [publicId, readOnly]);
 
   const handleShare = async () => {

@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  async headers() {
-    return [{ source: '/:path*', headers: [
+  headers() {
+    return Promise.resolve([{ source: '/:path*', headers: [
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       { key: 'X-Frame-Options', value: 'DENY' },
       { key: 'Referrer-Policy', value: 'no-referrer' },
@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
       { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
     ] }, { source: '/api/dashboards/:id', headers: [
       { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
-    ] }];
+    ] }]);
   },
 };
 

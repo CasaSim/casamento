@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import FormData from 'form-data';
 import User from '@/models/User';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import Mailgun from 'mailgun.js';
 import { emailAddress, jsonBody, rateLimit, safeRoute } from '@/lib/security';
 

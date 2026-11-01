@@ -7,9 +7,9 @@ const suffix = randomBytes(8).toString('hex');
 const emails = [`security-a-${suffix}@example.test`, `security-b-${suffix}@example.test`];
 const password = `Test-password-${suffix}`;
 const client = new MongoClient(process.env.MONGODB_URI);
-async function call(path, method = 'GET', body, cookie, extra = {}) {
+async function call(path, method, body, cookie, extra = {}) {
   return fetch(new URL(path, base), {
-    method, headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(cookie ? { cookie } : {}), ...extra },
+    method: method ?? 'GET', headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(cookie ? { cookie } : {}), ...extra },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
@@ -28,9 +28,9 @@ async function main() {
   await client.connect();
   const db = client.db();
   try {
-    for (const email of emails) {
+    await Promise.all(emails.map(async email => {
       assert.equal((await call('/api/auth/signup', 'POST', { name: 'Security test', email, password })).status, 201);
-    }
+    }));
     const cookieA = await login(emails[0]);
     const cookieB = await login(emails[1]);
     assert.ok(cookieA.includes('session-token'));
@@ -53,7 +53,7 @@ async function main() {
     const otherExpense = await otherCreated.json();
     // Foreign references must not leak another account's expenses into a shared view.
     await db.collection('dashboards').updateOne({ _id: new ObjectId(dashboardId) }, { $push: { expenses: new ObjectId(otherExpense._id) } });
-    for (const cookie of [undefined, cookieA, cookieB]) {
+    await Promise.all([undefined, cookieA, cookieB].map(async cookie => {
       const response = await call(publicPath, 'GET', undefined, cookie);
       assert.equal(response.status, 200);
       assert.ok(response.headers.get('cache-control').includes('no-store'));
@@ -63,7 +63,7 @@ async function main() {
       assert.equal(visible[0].descricao, expense.descricao);
       assert.equal(visible[0].user, undefined);
       assert.equal(visible[0].__v, undefined);
-    }
+    }));
     const sharedPage = await call(`/Dashboard/${dashboardId}`);
     assert.equal(sharedPage.status, 200);
     assert.ok(sharedPage.headers.get('x-robots-tag').includes('noindex'));
@@ -72,9 +72,9 @@ async function main() {
     assert.ok(html.includes('Exportar para Excel'));
     assert.ok(!html.includes('Cadastrar Gastos'));
     assert.ok(!html.includes('Compartilhar visualização'));
-    for (const method of ['POST', 'PUT', 'DELETE']) {
+    await Promise.all(['POST', 'PUT', 'DELETE'].map(async method => {
       assert.equal((await call(publicPath, method, {})).status, 405);
-    }
+    }));
     assert.equal((await call('/api/dashboards/not-an-id')).status, 404);
     assert.equal((await call(`/api/dashboards/${new ObjectId()}`)).status, 404);
     const path = `/api/expenses/${expense._id}`;

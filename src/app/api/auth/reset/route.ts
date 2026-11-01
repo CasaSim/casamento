@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import { HttpError, jsonBody, passwordValue, rateLimit, safeRoute, text } from '@/lib/security';
 
 export async function POST(req: Request) {

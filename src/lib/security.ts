@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -19,7 +19,11 @@ export function text(value: unknown, max: number, required = true): string {
 
 export function emailAddress(value: unknown) {
   const email = text(value, 254).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'E-mail inválido.');
+  const at = email.indexOf('@');
+  const dot = email.lastIndexOf('.');
+  if (at <= 0 || at !== email.lastIndexOf('@') || dot <= at + 1 || dot === email.length - 1 || /\s/.test(email)) {
+    throw new HttpError(400, 'E-mail inválido.');
+  }
   return email;
 }
 
@@ -38,20 +42,19 @@ export async function jsonBody(req: Request): Promise<Record<string, unknown>> {
     throw new HttpError(403, 'Origem não permitida.');
   }
   if (!req.headers.get('content-type')?.startsWith('application/json')) throw new HttpError(415, 'Envie JSON.');
-  const reader = req.body?.getReader();
-  if (!reader) throw new HttpError(400, 'JSON inválido.');
+  if (!req.body) throw new HttpError(400, 'JSON inválido.');
   const chunks: Uint8Array[] = [];
   let size = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > 16384) { await reader.cancel(); throw new HttpError(413, 'Dados muito grandes.'); }
-    chunks.push(value);
-  }
+  await req.body.pipeTo(new WritableStream<Uint8Array>({
+    write(value) {
+      size += value.byteLength;
+      if (size > 16384) throw new HttpError(413, 'Dados muito grandes.');
+      chunks.push(value);
+    },
+  }));
   try {
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error();
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Expected a JSON object');
     return body;
   } catch { throw new HttpError(400, 'JSON inválido.'); }
 }

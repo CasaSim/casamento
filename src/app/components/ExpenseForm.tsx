@@ -23,7 +23,7 @@ const fields = [
 
 const inputClassName = 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black';
 
-export default function ExpenseForm({ expenseId }: { expenseId?: string }) {
+export default function ExpenseForm({ expenseId }: Readonly<{ expenseId?: string }>) {
   const editing = expenseId !== undefined;
   const endpoint = editing ? `/api/expenses/${encodeURIComponent(expenseId)}` : '/api/expenses/list';
   const [values, setValues] = useState(emptyValues);
@@ -60,7 +60,7 @@ export default function ExpenseForm({ expenseId }: { expenseId?: string }) {
       }
     }
 
-    fetchExpense();
+    void fetchExpense();
     return () => controller.abort();
   }, [editing, endpoint]);
 

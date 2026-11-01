@@ -8,7 +8,7 @@
     "build:force": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test:security": "node --test tests/security.cjs",
+    "test:security": "tsc --project tsconfig.security.json && node --test tests/security.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

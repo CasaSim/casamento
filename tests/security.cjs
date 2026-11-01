@@ -1,20 +1,39 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- CommonJS test harness. */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const ts = require('typescript');
+const { registerHooks, createRequire } = require('node:module');
+const path = require('node:path');
+
+const buildRoot = path.resolve(__dirname, '../.test-build');
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier.startsWith('@/')) {
+      const file = path.join(buildRoot, `${specifier.slice(2)}.js`);
+      return nextResolve(file, context);
+    }
+    return nextResolve(specifier, context);
+  },
+});
 
 function load(file, mocks = {}) {
-  const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true, target: ts.ScriptTarget.ES2022 },
-  }).outputText;
-  const loaded = { exports: {} };
-  vm.runInNewContext(source, {
-    module: loaded, exports: loaded.exports, require: name => mocks[name] ?? require(name),
-    Buffer, process, console, URL, Request, Response,
-  }, { filename: file });
-  return loaded.exports;
+  const compiled = path.join(buildRoot, file.replace(/^src\//, '').replace(/\.ts$/, '.js'));
+  const localRequire = createRequire(compiled);
+  const originals = new Map();
+  try {
+    for (const [name, exports] of Object.entries(mocks)) {
+      const id = name.startsWith('@/')
+        ? path.join(buildRoot, `${name.slice(2)}.js`)
+        : localRequire.resolve(name);
+      originals.set(id, require.cache[id]);
+      require.cache[id] = { id, filename: id, loaded: true, exports };
+    }
+    return localRequire(compiled);
+  } finally {
+    for (const [id, original] of originals) {
+      if (original) require.cache[id] = original;
+      else delete require.cache[id];
+    }
+  }
 }
 const security = load('src/lib/security.ts');
 const request = (body, headers = {}) => new Request('https://casasim.test/api/test', {
@@ -22,14 +41,15 @@ const request = (body, headers = {}) => new Request('https://casasim.test/api/te
 });
 
 test('rejects NoSQL operators, malformed email, weak/oversized passwords and invalid amounts', () => {
-  for (const value of [undefined, null, { $ne: null }, ['a@b.com'], 'invalid']) {
+  for (const value of [undefined, null, { $ne: null }, ['a@b.com'], 'invalid', '@b.com', 'a@@b.com', 'a@b', 'a@.com', 'a@b.', 'a b@c.com', 'a@b c.com']) {
     assert.throws(() => security.emailAddress(value));
   }
   assert.equal(security.emailAddress(' A@B.COM '), 'a@b.com');
+  assert.equal(security.emailAddress('first.last+tag@sub.example.com'), 'first.last+tag@sub.example.com');
   for (const value of ['short', 'a'.repeat(73), '💍'.repeat(20), { $gt: '' }]) {
     assert.throws(() => security.passwordValue(value));
   }
-  for (const valor of [NaN, Infinity, -1, 0, '10', { $gt: 0 }]) {
+  for (const valor of [Number.NaN, Infinity, -1, 0, '10', { $gt: 0 }]) {
     assert.throws(() => security.expenseValues({ categoria: 'Buffet', valor }));
   }
   assert.throws(() => security.expenseValues({ categoria: { $ne: null }, valor: 10 }));
@@ -51,6 +71,34 @@ test('rejects cross-origin writes, malformed JSON and oversized bodies', async (
   const malformed = new Request('https://casasim.test/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
   await assert.rejects(security.jsonBody(malformed), { status: 400 });
   assert.equal((await security.jsonBody(request({ valid: true }))).valid, true);
+});
+
+test('limits streamed request bodies and cancels oversized input', async () => {
+  let cancelled = false;
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(Buffer.from('{"value":"'));
+      controller.enqueue(Buffer.alloc(17000, 'x'));
+    },
+    cancel() { cancelled = true; },
+  });
+  const req = new Request('https://casasim.test/api/test', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: stream, duplex: 'half',
+  });
+  await assert.rejects(security.jsonBody(req), { status: 413 });
+  assert.equal(cancelled, true);
+
+  const valid = new ReadableStream({
+    start(controller) {
+      controller.enqueue(Buffer.from('{"valid":'));
+      controller.enqueue(Buffer.from('true}'));
+      controller.close();
+    },
+  });
+  const body = await security.jsonBody(new Request('https://casasim.test/api/test', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: valid, duplex: 'half',
+  }));
+  assert.equal(body.valid, true);
 });
 
 test('password reset hashes and consumes token atomically, revokes sessions, rejects reuse', async () => {
@@ -98,4 +146,32 @@ test('expense object operations require session and bind all queries to owner', 
     assert.equal(filter.user, 'owner');
     assert.equal(filter._id, expense._id);
   }
+});
+
+test('login compares a generated dummy hash for unknown accounts and authenticates valid accounts', async () => {
+  const bcrypt = require('bcryptjs');
+  const comparisons = [];
+  let account = null;
+  const auth = load('src/lib/auth.ts', {
+    '@/models/User': { findOne: async () => account },
+    './security': { ...security, rateLimit: async () => {} },
+    bcryptjs: {
+      ...bcrypt,
+      compare(password, hash) {
+        comparisons.push(hash);
+        return bcrypt.compare(password, hash);
+      },
+    },
+  });
+  const authorize = auth.authOptions.providers[0].options.authorize;
+  const credentials = { email: 'a@example.test', password: 'valid test password' };
+  assert.equal(await authorize(credentials), null);
+  assert.equal(await authorize(credentials), null);
+  assert.equal(comparisons.length, 2);
+  assert.equal(comparisons[0], comparisons[1]);
+  assert.equal(bcrypt.getRounds(comparisons[0]), 12);
+
+  account = { _id: 'owner', email: credentials.email, name: 'Test', password: await bcrypt.hash(credentials.password, 12) };
+  assert.deepEqual(await authorize(credentials), { id: 'owner', email: credentials.email, name: 'Test' });
+  assert.equal(await authorize({ ...credentials, password: 'wrong password' }), null);
 });

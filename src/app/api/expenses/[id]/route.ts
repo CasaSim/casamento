@@ -23,9 +23,14 @@ async function handle(request: NextRequest, context: Context, method: 'GET' | 'P
     await connectDB();
     // Always bind the object identifier to its authenticated owner.
     const filter = { _id: id, user: session.user.id };
-    const expense = method === 'PUT'
-      ? await Expense.findOneAndUpdate(filter, { $set: values }, { new: true, runValidators: true })
-      : method === 'DELETE' ? await Expense.findOneAndDelete(filter) : await Expense.findOne(filter);
+    let expense;
+    if (method === 'PUT') {
+      expense = await Expense.findOneAndUpdate(filter, { $set: values }, { new: true, runValidators: true });
+    } else if (method === 'DELETE') {
+      expense = await Expense.findOneAndDelete(filter);
+    } else {
+      expense = await Expense.findOne(filter);
+    }
     if (!expense) throw new HttpError(404, 'Gasto não encontrado.');
     if (method === 'DELETE') {
       await Dashboard.updateOne({ user: session.user.id }, { $pull: { expenses: expense._id } });

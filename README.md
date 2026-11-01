@@ -59,6 +59,8 @@ O container da aplicação executa o servidor de desenvolvimento como usuário s
 
 As correções e limitações da revisão de segurança estão em [SECURITY.md](SECURITY.md).
 
+Para executar `npm run test:security`, use Node.js 22.15 ou superior. Os testes compilam os módulos TypeScript em `.test-build/` e usam o carregador nativo do Node com dependências simuladas. A pasta gerada fica fora do Git. O CI e o Docker instalam dependências com `npm ci --ignore-scripts`.
+
 ## Visualização pública do Dashboard
 
 No dashboard autenticado, clique em **Compartilhar visualização** para obter o link `/Dashboard/ID_DO_DASHBOARD`. O link funciona sem login e também para quem estiver conectado em outra conta, sempre mostrando o dashboard indicado. É possível consultar Categoria, Descrição, Data, Telefone, Contato e Valor, ver o total e exportar para Excel.

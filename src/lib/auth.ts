@@ -2,7 +2,11 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
 import { connectDB, emailAddress, rateLimit } from './security';
+
+// Generated per process; this hash never belongs to an account.
+const dummyPasswordHash = bcrypt.hash(randomBytes(32).toString('hex'), 12);
 
 export const authOptions: NextAuthOptions = {
   providers: [CredentialsProvider({
@@ -17,7 +21,7 @@ export const authOptions: NextAuthOptions = {
         await rateLimit('login', email, 10);
         const user = await User.findOne({ email });
         // Perform bcrypt even for unknown accounts to reduce timing differences.
-        const hash = user?.password || '$2b$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW';
+        const hash = user?.password || await dummyPasswordHash;
         const valid = await bcrypt.compare(password, hash);
         if (!user?.password || !valid) return null;
         return { id: user._id.toString(), name: user.name, email: user.email };
