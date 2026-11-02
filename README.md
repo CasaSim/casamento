@@ -17,7 +17,7 @@ Nextjs + Mongo.
 ## Features
 - Dashboard gastos + contatos [ok]
 - Agenda integrada [por implementar]
-- Esqueci o Password [Falta implementar envio de e-mail com password/session temporário e elaborar novo password]
+- Esqueci a senha: envio de link de redefinição pelo Resend, com validade de uma hora e uso único. Veja o [passo a passo de configuração](docs/resend.md).
   
 ## Getting Started
 
@@ -55,7 +55,7 @@ docker compose exec app node tests/integration.cjs
 docker compose up -d mongo_admin
 ```
 
-O container da aplicação executa o servidor de desenvolvimento como usuário sem privilégios. Após alterações no código, execute novamente `docker compose up -d --build app`. O volume do MongoDB preserva os dados. O script de criação do usuário só roda no primeiro início de um volume novo. Para o envio de recuperação de senha, preencha `MAILGUN_KEY` e `MAILGUN_DOMAIN` no `.env` e recrie o serviço da aplicação.
+O container da aplicação executa o servidor de desenvolvimento como usuário sem privilégios. As alterações em `src` são refletidas automaticamente pelo volume de código. Após alterações nas dependências ou na configuração da imagem, execute novamente `docker compose up -d --build app`. O volume do MongoDB preserva os dados. O script de criação do usuário só roda no primeiro início de um volume novo. A recuperação de senha exige `RESEND_API_KEY` e `RESEND_FROM_EMAIL`; veja o [guia do Resend](docs/resend.md).
 
 As correções e limitações da revisão de segurança estão em [SECURITY.md](SECURITY.md).
 

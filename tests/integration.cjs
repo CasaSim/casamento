@@ -13,16 +13,20 @@ async function call(path, method, body, cookie, extra = {}) {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
-async function login(email) {
+async function login(email, loginPassword = password) {
   const csrf = await call('/api/auth/csrf');
   const cookies = csrf.headers.getSetCookie().map(value => value.split(';')[0]);
   const { csrfToken } = await csrf.json();
   const response = await fetch(new URL('/api/auth/callback/credentials', base), {
     method: 'POST', redirect: 'manual',
     headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: cookies.join('; ') },
-    body: new URLSearchParams({ email, password, csrfToken, json: 'true', callbackUrl: base }),
+    body: new URLSearchParams({ email, password: loginPassword, csrfToken, json: 'true', callbackUrl: new URL('/Dashboard', base).href }),
   });
-  return response.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
+  const cookie = response.headers.getSetCookie().map(value => value.split(';')[0]).join('; ');
+  if (cookie.includes('session-token')) {
+    assert.equal((await response.json()).url, new URL('/Dashboard', base).href);
+  }
+  return cookie;
 }
 async function main() {
   await client.connect();
@@ -100,17 +104,26 @@ async function main() {
     assert.equal(empty.descricao, '');
     const token = randomBytes(32).toString('hex');
     await db.collection('users').updateOne({ email: emails[0] }, { $set: {
-      resetPasswordToken: createHash('sha256').update(token).digest('hex'), resetPasswordExpires: new Date(Date.now() + 60000),
+      resetPasswordToken: createHash('sha256').update(token).digest('hex'), resetPasswordExpires: new Date(0),
     } });
+    // Seed a token to test reset independently of real email delivery.
+    assert.equal((await call('/api/auth/reset', 'POST', { token, password: `${password}-new` })).status, 400);
+    await db.collection('users').updateOne({ email: emails[0] }, { $set: { resetPasswordExpires: new Date(Date.now() + 60000) } });
+    assert.equal((await call('/api/auth/reset', 'POST', { email: emails[0], password: `${password}-new` })).status, 400);
     assert.equal((await call('/api/auth/reset', 'POST', { token, password: `${password}-new` })).status, 200);
     assert.equal((await call('/api/auth/reset', 'POST', { token, password })).status, 400);
     assert.equal((await call('/api/expenses/list', 'GET', undefined, cookieA)).status, 401);
     const stored = await db.collection('users').findOne({ email: emails[0] });
     assert.equal(stored.sessionVersion, 1);
     assert.equal(stored.resetPasswordToken, undefined);
+    assert.equal(stored.resetPasswordExpires, undefined);
+    assert.ok(!(await login(emails[0])).includes('session-token'));
+    const newCookie = await login(emails[0], `${password}-new`);
+    assert.ok(newCookie.includes('session-token'));
+    assert.equal((await call('/api/expenses/list', 'GET', undefined, newCookie)).status, 200);
     assert.equal((await call(path, 'GET', undefined, cookieB)).status, 404);
     assert.ok(await db.collection('expenses').findOne({ _id: new ObjectId(expense._id) }));
-    console.log('Integration passed: signup, login, owner isolation, injection, CSRF, reset, token reuse and session revocation.');
+    console.log('Integration passed: signup, dashboard login callback, owner isolation, injection, CSRF, single-use reset token, new password login and session revocation.');
   } finally {
     const users = await db.collection('users').find({ email: { $in: emails } }).toArray();
     const ids = users.map(user => user._id);

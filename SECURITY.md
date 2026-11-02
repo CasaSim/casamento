@@ -4,8 +4,8 @@ Changes cover API input validation (including NoSQL operator rejection), owner-s
 
 ## Configuration
 
-- Set a random NEXTAUTH_SECRET (at least 32 random bytes), MONGODB_URI and the canonical NEXTAUTH_URL. Production must use HTTPS. Do not derive password recovery URLs from incoming Host headers.
-- Recovery also requires MAILGUN_KEY and MAILGUN_DOMAIN. Existing recovery tokens are invalidated by the change to SHA-256 token storage; request a new link.
+- Set a random NEXTAUTH_SECRET (at least 32 random bytes), MONGODB_URI and the canonical NEXTAUTH_URL. Production must use HTTPS.
+- Password recovery sends a single-use link through the Resend HTTPS API. Configure RESEND_API_KEY, RESEND_FROM_EMAIL and the canonical NEXTAUTH_URL; the production URL must use HTTPS. Links expire after one hour, use 32 cryptographically random bytes and are stored only as SHA-256 hashes. Reset checks expiration and consumes the token atomically while changing the password and revoking sessions. Direct reset by email alone is no longer accepted. Requests are limited globally and by email/token. Unknown emails and rejected deliveries return the same generic response; provider failures are logged without credentials, recipients or tokens. A failed delivery removes only its own token, preserving newer concurrent requests. The Resend test sender only permits delivery to the account owner's email; verify an owned domain for real users.
 - New passwords require 12 characters and at most 72 UTF-8 bytes (bcrypt limit). Existing shorter passwords can still log in.
 - The authentication endpoint continues to support credentials, as before; APIs now use the same configuration. Changing a password revokes existing JWT sessions on their next validation.
 - MongoDB must allow creation of the SecurityLimit collection/index. Counters are shared across application instances and use 15-minute windows; per-account and global limits also apply to unknown accounts. Tune the global limits for expected traffic. At the proxy, configure request size limits and IP-based throttling using only trusted client IP metadata. The application intentionally does not trust arbitrary X-Forwarded-For values.
@@ -13,7 +13,7 @@ Changes cover API input validation (including NoSQL operator rejection), owner-s
 
 ## Validation
 
-Run `npm run test:security`, `npm run typecheck`, `npm run lint`, `npm run build` and `npm audit`. Regression tests cover malicious inputs, cross-origin writes, payload limits, ownership filters and atomic password recovery. These tests mock database operations; exercise email delivery, MongoDB indexes, concurrent rate limits and session revocation against a staging database before deployment.
+Run `npm run test:security`, `npm run typecheck`, `npm run lint`, `npm run build` and `npm audit`. Regression tests cover malicious inputs, cross-origin writes, payload limits, ownership filters, token-based password recovery and Resend requests/failures. These tests mock database and delivery operations; exercise real Resend delivery, MongoDB indexes, concurrent rate limits and session revocation against a staging environment before deployment.
 
 This is a source review, not a penetration test or a guarantee of full OWASP compliance. The CSP establishes framing/object/base/form restrictions; full script restrictions require nonce integration with Next.js. Infrastructure TLS, database privileges, secret rotation, monitoring and backup policies require deployment-specific verification.
 
@@ -31,7 +31,7 @@ The Docker configuration is for local development. The app runs as the unprivile
 - The Docker application returned HTTP 200 for the homepage.
 - `node tests/integration.cjs` passed against the local Docker MongoDB: signup/login, owner isolation for GET/PUT/DELETE, NoSQL input rejection, cross-origin rejection, password reset, token reuse rejection and revocation of the previous session. Temporary test users and their expenses were removed.
 - The dependency audit reported 21 moderate findings and no high or critical findings. These are still open as described above.
-- Email delivery requires real Mailgun credentials and was not exercised.
+- The former Mailgun flow was not exercised and has since been replaced with Resend delivery.
 
 Before upgrading an existing database, normalize legacy email addresses to lowercase and resolve any resulting collisions; new registrations and credential logins use canonical lowercase emails.
 

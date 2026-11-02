@@ -7,8 +7,10 @@ services:
       MONGODB_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASSWORD}@mongodb:27017/casamento?authSource=casamento
       NEXTAUTH_URL: ${NEXTAUTH_URL:?Set NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET}
-      MAILGUN_KEY: ${MAILGUN_KEY:-}
-      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-CasaSim <onboarding@resend.dev>}
+    volumes:
+      - ./src:/app/src:ro
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:

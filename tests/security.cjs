@@ -101,27 +101,141 @@ test('limits streamed request bodies and cancels oversized input', async () => {
   assert.equal(body.valid, true);
 });
 
-test('password reset hashes and consumes token atomically, revokes sessions, rejects reuse', async () => {
+test('password reset requires a valid unexpired token, consumes it once and revokes sessions', async () => {
+  const { createHash } = require('node:crypto');
+  const bcrypt = require('bcryptjs');
+  const token = 'ab'.repeat(32);
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  let stored = { tokenHash, expires: new Date(Date.now() + 60000) };
   let captured;
+  const limits = [];
   const route = load('src/app/api/auth/reset/route.ts', {
-    '@/lib/security': { ...security, rateLimit: async () => {} },
+    '@/lib/security': { ...security, rateLimit: async (...args) => limits.push(args) },
     '@/models/User': { findOneAndUpdate: async (filter, update) => {
-      if (captured) return null;
       captured = { filter, update };
+      if (!stored || filter.resetPasswordToken !== stored.tokenHash || stored.expires <= filter.resetPasswordExpires.$gt) return null;
+      stored = null;
       return { _id: 'user' };
     } },
   });
-  const token = 'ab'.repeat(32);
   const password = 'a secure password';
-  assert.equal((await route.POST(request({ token, password }))).status, 200);
-  assert.notEqual(captured.filter.resetPasswordToken, token);
-  assert.equal(captured.filter.resetPasswordToken, require('node:crypto').createHash('sha256').update(token).digest('hex'));
-  assert.equal(await require('bcryptjs').compare(password, captured.update.$set.password), true);
+  for (const body of [
+    { email: 'a@example.test', password },
+    { token: { $ne: null }, password },
+    { token: 'invalid', password },
+    { token, password: 'short' },
+    { token, password: '💍'.repeat(20) },
+    { token, password: { $gt: '' } },
+  ]) assert.equal((await route.POST(request(body))).status, 400);
+  assert.equal((await route.POST(request({ token, password }, { origin: 'https://attacker.test' }))).status, 403);
+  assert.equal(captured, undefined);
+  const response = await route.POST(request({ token, password }));
+  assert.equal(response.status, 200);
+  assert.equal(captured.filter.resetPasswordToken, tokenHash);
+  assert.ok(captured.filter.resetPasswordExpires.$gt instanceof Date);
+  assert.equal(await bcrypt.compare(password, captured.update.$set.password), true);
+  assert.equal(bcrypt.getRounds(captured.update.$set.password), 12);
   assert.equal(captured.update.$inc.sessionVersion, 1);
-  assert.equal(captured.update.$unset.resetPasswordToken, 1);
+  assert.deepEqual(captured.update.$unset, { resetPasswordToken: 1, resetPasswordExpires: 1 });
+  assert.deepEqual(limits.slice(0, 2), [['reset-global', 'all', 100], ['reset', tokenHash, 5]]);
   assert.equal((await route.POST(request({ token, password }))).status, 400);
-  assert.equal((await route.POST(request({ token: { $ne: null }, password }))).status, 400);
+  stored = { tokenHash, expires: new Date(0) };
+  assert.equal((await route.POST(request({ token, password }))).status, 400);
+  stored = { tokenHash: 'other-token', expires: new Date(Date.now() + 60000) };
+  assert.equal((await route.POST(request({ token, password }))).status, 400);
 });
+
+test('forgot sends only for existing accounts, stores hashed tokens and rolls back failed deliveries', async t => {
+  const { createHash } = require('node:crypto');
+  const updates = [];
+  const deliveries = [];
+  const limits = [];
+  let deliveryFails = false;
+  let limited = false;
+  t.mock.method(console, 'error', () => {});
+  const route = load('src/app/api/auth/forgot/route.ts', {
+    '@/lib/security': { ...security, rateLimit: async (...args) => {
+      limits.push(args);
+      if (limited) throw new security.HttpError(429, 'Muitas tentativas.');
+    } },
+    '@/lib/password-recovery': {
+      recoveryConfig: () => ({}),
+      sendRecoveryEmail: async (email, token) => {
+        deliveries.push({ email, token });
+        if (deliveryFails) throw new Error('Delivery failed');
+      },
+    },
+    '@/models/User': {
+      findOne: async ({ email }) => email === 'a@example.test' ? { _id: 'user' } : null,
+      updateOne: async (filter, update) => { updates.push({ filter, update }); },
+    },
+  });
+  assert.equal((await route.POST(request({ email: { $ne: null } }))).status, 400);
+  const response = await route.POST(request({ email: ' A@EXAMPLE.TEST ' }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(limits, [['forgot-global', 'all', 100], ['forgot', 'a@example.test', 3]]);
+  assert.equal(deliveries.length, 1);
+  assert.equal(deliveries[0].email, 'a@example.test');
+  assert.match(deliveries[0].token, /^[a-f0-9]{64}$/);
+  const firstHash = createHash('sha256').update(deliveries[0].token).digest('hex');
+  assert.equal(updates[0].update.$set.resetPasswordToken, firstHash);
+  const expires = updates[0].update.$set.resetPasswordExpires.getTime();
+  assert.ok(expires > Date.now() + 3500000 && expires <= Date.now() + 3600000);
+  assert.equal(updates[0].update.$set.password, undefined);
+  const responseBody = await response.json();
+  assert.equal(JSON.stringify(responseBody).includes(deliveries[0].token), false);
+  const unknown = await route.POST(request({ email: 'unknown@example.test' }));
+  assert.deepEqual(await unknown.json(), responseBody);
+  assert.equal(deliveries.length, 1);
+  assert.equal(updates.length, 1);
+  deliveryFails = true;
+  const failed = await route.POST(request({ email: 'a@example.test' }));
+  assert.deepEqual(await failed.json(), responseBody);
+  const failedHash = createHash('sha256').update(deliveries[1].token).digest('hex');
+  assert.notEqual(failedHash, firstHash);
+  assert.deepEqual(updates[2].filter, { _id: 'user', resetPasswordToken: failedHash });
+  assert.deepEqual(updates[2].update.$unset, { resetPasswordToken: 1, resetPasswordExpires: 1 });
+  limited = true;
+  assert.equal((await route.POST(request({ email: 'a@example.test' }))).status, 429);
+  assert.equal(deliveries.length, 2);
+});
+
+test('Resend delivery uses configured credentials and canonical URL and rejects provider errors', async t => {
+  const keys = ['RESEND_API_KEY', 'RESEND_FROM_EMAIL', 'NEXTAUTH_URL'];
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  t.after(() => {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+  process.env.RESEND_API_KEY = 'test-key';
+  process.env.RESEND_FROM_EMAIL = 'CasaSim <reset@example.test>';
+  process.env.NEXTAUTH_URL = 'https://casasim.test';
+  const recovery = load('src/lib/password-recovery.ts');
+  let captured;
+  let rejectDelivery = false;
+  t.mock.method(console, 'error', () => {});
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    captured = { url, options };
+    return new Response('{}', { status: rejectDelivery ? 422 : 200 });
+  });
+  const token = 'cd'.repeat(32);
+  await recovery.sendRecoveryEmail('a@example.test', token);
+  assert.equal(captured.url, 'https://api.resend.com/emails');
+  assert.equal(captured.options.headers.Authorization, 'Bearer test-key');
+  assert.ok(captured.options.signal instanceof AbortSignal);
+  const body = JSON.parse(captured.options.body);
+  assert.equal(body.from, 'CasaSim <reset@example.test>');
+  assert.deepEqual(body.to, ['a@example.test']);
+  assert.ok(body.text.includes('https://casasim.test/auth/reset-password?token=' + token));
+  rejectDelivery = true;
+  await assert.rejects(recovery.sendRecoveryEmail('a@example.test', token));
+  delete process.env.RESEND_API_KEY;
+  assert.throws(() => recovery.recoveryConfig());
+});
+
+
 
 test('expense object operations require session and bind all queries to owner', async () => {
   let session = null;

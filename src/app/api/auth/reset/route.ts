@@ -8,20 +8,22 @@ export async function POST(req: Request) {
   return safeRoute(async () => {
     const body = await jsonBody(req);
     const token = text(body.token, 64);
-    if (!/^[a-f0-9]{64}$/.test(token)) throw new HttpError(400, 'Token inválido ou expirado.');
+    if (!/^[a-f0-9]{64}$/.test(token)) throw new HttpError(400, 'Link inválido ou expirado. Solicite uma nova recuperação.');
     const password = passwordValue(body.password);
     await rateLimit('reset-global', 'all', 100);
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    await rateLimit('reset', tokenHash, 5);
     const hashed = await bcrypt.hash(password, 12);
-    // Consume the token atomically: concurrent requests cannot reuse it.
+    // Check expiration and consume the token in one atomic update.
     const user = await User.findOneAndUpdate({
-      resetPasswordToken: createHash('sha256').update(token).digest('hex'),
+      resetPasswordToken: tokenHash,
       resetPasswordExpires: { $gt: new Date() },
     }, {
       $set: { password: hashed },
       $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 },
       $inc: { sessionVersion: 1 },
     });
-    if (!user) throw new HttpError(400, 'Token inválido ou expirado.');
-    return NextResponse.json({ message: 'Senha redefinida com sucesso.' });
+    if (!user) throw new HttpError(400, 'Link inválido ou expirado. Solicite uma nova recuperação.');
+    return NextResponse.json({ message: 'Senha redefinida com sucesso. Entre com a nova senha.' });
   });
 }

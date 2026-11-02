@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import ExportButton from "./ExportButton";
 
 
@@ -23,6 +24,8 @@ function formatDate(value?: string | null) {
 
 export default function Dashboard({ publicId }: Readonly<{ publicId?: string }>) {
   const readOnly = publicId !== undefined;
+  const { data: session } = useSession();
+  const userName = session?.user?.name?.trim();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -102,7 +105,14 @@ export default function Dashboard({ publicId }: Readonly<{ publicId?: string }>)
 
   return (
     <div className="p-8 bg-white rounded-lg shadow-md w-full ">
-      <h1 className="text-2xl font-bold mb-4 text-black">Dashboard de Gastos</h1>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold text-black">Dashboard de Gastos</h1>
+        {!readOnly && session?.user && (
+          <p className="min-w-0 break-words text-base text-gray-600 sm:max-w-[50%] sm:text-right">
+            {userName ? <>Olá, <span className="font-semibold text-gray-900">{userName}</span></> : 'Olá!'}
+          </p>
+        )}
+      </div>
       {readOnly && <p className="mb-4 text-sm text-gray-700">Somente visualização. Você pode consultar os gastos e exportar para Excel.</p>}
       <div className="flex flex-wrap gap-4">
           <ExportButton 

@@ -14,13 +14,14 @@ export default function SignIn() {
     setError('');
     const res = await signIn('credentials', {
       redirect: false,
+      callbackUrl: '/Dashboard',
       email,
       password,
     });
-    if (res?.error) {
+    if (!res?.ok || res.error) {
       setError('Usuário ou senha inválidos');
     } else {
-      window.location.href = '/';
+      window.location.href = '/Dashboard';
     }
   };
 
